@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FORGE — Your Ultimate Gym Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          heading: ["'Instrument Serif'", "serif"],
+          body: ["'Barlow'", "sans-serif"],
+        },
+        borderRadius: {
+          DEFAULT: "9999px",
+        },
+      },
+    },
+  };
+</script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/framer-motion@11.11.17/dist/framer-motion.js"></script>
+<script>window.Motion = window.FramerMotion;</script>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: #000; font-family: 'Barlow', sans-serif; overflow-x: hidden; }
+
+  .liquid-glass {
+    background: rgba(255,255,255,0.01);
+    background-blend-mode: luminosity;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: none;
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.1);
+    position: relative;
+    overflow: hidden;
+  }
+  .liquid-glass::before {
+    content: "";
+    position: absolute; inset: 0;
+    border-radius: inherit;
+    padding: 1.4px;
+    background: linear-gradient(180deg,
+      rgba(255,255,255,0.45) 0%,
+      rgba(255,255,255,0.15) 20%,
+      rgba(255,255,255,0) 40%,
+      rgba(255,255,255,0) 60%,
+      rgba(255,255,255,0.15) 80%,
+      rgba(255,255,255,0.45) 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  .liquid-glass-strong {
+    background: rgba(255,255,255,0.04);
+    background-blend-mode: luminosity;
+    backdrop-filter: blur(50px);
+    -webkit-backdrop-filter: blur(50px);
+    border: none;
+    box-shadow: 4px 4px 4px rgba(0,0,0,0.05), inset 0 1px 1px rgba(255,255,255,0.15);
+    position: relative;
+    overflow: hidden;
+  }
+  .liquid-glass-strong::before {
+    content: "";
+    position: absolute; inset: 0;
+    border-radius: inherit;
+    padding: 1.4px;
+    background: linear-gradient(180deg,
+      rgba(255,255,255,0.5) 0%,
+      rgba(255,255,255,0.2) 20%,
+      rgba(255,255,255,0) 40%,
+      rgba(255,255,255,0) 60%,
+      rgba(255,255,255,0.2) 80%,
+      rgba(255,255,255,0.5) 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* Workout Plan Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(12px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 1rem;
+  }
+  .modal-box {
+    background: rgba(20,20,20,0.95);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 1.5rem;
+    width: 100%; max-width: 680px;
+    max-height: 90vh; overflow-y: auto;
+    padding: 2rem;
+    box-shadow: 0 0 80px rgba(255,100,50,0.1);
+  }
+  .day-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 1rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 0.75rem;
+  }
+  .day-card:hover { background: rgba(255,255,255,0.06); }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%; height: 4px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 9999px; outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(255,100,50,0.5);
+  }
+  select, input[type=text], input[type=number], textarea {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 0.75rem;
+    color: #fff;
+    padding: 0.6rem 1rem;
+    font-family: 'Barlow', sans-serif;
+    font-size: 0.875rem;
+    width: 100%;
+    outline: none;
+  }
+  select option { background: #111; color: #fff; }
+  select:focus, input:focus, textarea:focus {
+    border-color: rgba(255,120,60,0.5);
+    box-shadow: 0 0 0 2px rgba(255,120,60,0.1);
+  }
+  label { color: rgba(255,255,255,0.7); font-size: 0.75rem; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.35rem; display: block; }
+
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
+</head>
+<body class="bg-black">
+  <div id="root"></div>
+
+  <!-- Navbar -->
+  <script type="text/babel">
+    window.Navbar = function Navbar({ onPlanClick }) {
+      return (
+        <nav className="fixed top-4 left-0 right-0 z-50 flex items-center justify-between px-8 lg:px-16">
+          {/* Logo */}
+          <div className="liquid-glass w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0">
+            <span style={{fontFamily:"'Instrument Serif',serif", fontStyle:"italic", fontSize:"1.4rem", color:"#fff", lineHeight:1}}>f</span>
+          </div>
+          {/* Center nav */}
+          <div className="hidden md:flex items-center gap-1 liquid-glass rounded-full px-1.5 py-1.5">
+            {["Home","Programs","Muscles","Nutrition","Track"].map(n => (
+              <a key={n} href="#" className="px-3 py-2 text-sm font-medium text-white/90 font-body hover:text-white transition-colors">{n}</a>
+            ))}
+            <button
+              onClick={onPlanClick}
+              className="bg-white text-black px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap flex items-center gap-1.5 hover:bg-white/90 transition-colors"
+            >
+              Build My Plan
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/>
+              </svg>
+            </button>
+          </div>
+          {/* Spacer */}
+          <div className="w-12 h-12 invisible" />
+        </nav>
+      );
+    };
+  </script>
+
+  <!-- FadingVideo -->
+  <script type="text/babel">
+    window.FadingVideo = function FadingVideo({ src, className, style }) {
+      const videoRef = React.useRef(null);
+      const rafRef = React.useRef(null);
+      const fadingOutRef = React.useRef(false);
+      const FADE_MS = 500;
+      const FADE_OUT_LEAD = 0.55;
+
+      function fadeTo(target, duration) {
+        cancelAnimationFrame(rafRef.current);
+        const video = videoRef.current;
+        if (!video) return;
+        const start = performance.now();
+        const startOpacity = parseFloat(video.style.opacity) || 0;
+        function step(now) {
+          const elapsed = now - start;
+          const t = Math.min(elapsed / duration, 1);
+          video.style.opacity = startOpacity + (target - startOpacity) * t;
+          if (t < 1) rafRef.current = requestAnimationFrame(step);
+        }
+        rafRef.current = requestAnimationFrame(step);
+      }
+
+      React.useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+        video.style.opacity = 0;
+
+        function onLoaded() {
+          video.style.opacity = 0;
+          video.play().catch(() => {});
+          fadeTo(1, FADE_MS);
+        }
+        function onTimeUpdate() {
+          if (!fadingOutRef.current && video.duration && video.duration - video.currentTime <= FADE_OUT_LEAD && video.duration - video.currentTime > 0) {
+            fadingOutRef.current = true;
+            fadeTo(0, FADE_MS);
+          }
+        }
+        function onEnded() {
+          video.style.opacity = 0;
+          setTimeout(() => {
+            video.currentTime = 0;
+            video.play().catch(() => {});
+            fadingOutRef.current = false;
+            fadeTo(1, FADE_MS);
+          }, 100);
+        }
+        video.addEventListener("loadeddata", onLoaded);
+        video.addEventListener("timeupdate", onTimeUpdate);
+        video.addEventListener("ended", onEnded);
+        return () => {
+          cancelAnimationFrame(rafRef.current);
+          video.removeEventListener("loadeddata", onLoaded);
+          video.removeEventListener("timeupdate", onTimeUpdate);
+          video.removeEventListener("ended", onEnded);
+        };
+      }, []);
+
+      return (
+        <video
+          ref={videoRef}
+          src={src}
+          autoPlay muted playsInline preload="auto"
+          className={className}
+          style={{ ...style, opacity: 0 }}
+        />
+      );
+    };
+  </script>
+
+  <!-- BlurText -->
+  <script type="text/babel">
+    window.BlurText = function BlurText({ text, className }) {
+      const { motion } = window.Motion;
+      const ref = React.useRef(null);
+      const [visible, setVisible] = React.useState(false);
+
+      React.useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setVisible(true); }, { threshold: 0.1 });
+        obs.observe(el);
+        return () => obs.disconnect();
+      }, []);
+
+      const words = text.split(" ");
+      return (
+        <p ref={ref} className={className} style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", rowGap:"0.1em" }}>
+          {words.map((word, i) => (
+            <motion.span
+              key={i}
+              initial={{ filter:"blur(10px)", opacity:0, y:50 }}
+              animate={visible ? { filter:["blur(10px)","blur(5px)","blur(0px)"], opacity:[0,0.5,1], y:[50,-5,0] } : {}}
+              transition={{ duration:0.7, times:[0,0.5,1], ease:"easeOut", delay: i * 0.1 }}
+              style={{ display:"inline-block", marginRight:"0.28em" }}
+            >
+              {word}
+            </motion.span>
+          ))}
+        </p>
+      );
+    };
+  </script>
+
+  <!-- WorkoutPlanModal -->
+  <script type="text/babel">
+    window.WorkoutPlanModal = function WorkoutPlanModal({ onClose }) {
+      const { motion, AnimatePresence } = window.Motion;
+      const [step, setStep] = React.useState(1);
+      const [form, setForm] = React.useState({
+        goal: "muscle", level: "intermediate", days: 4,
+        equipment: "full", focus: "", age: "", weight: ""
+      });
+      const [plan, setPlan] = React.useState(null);
+      const [loading, setLoading] = React.useState(false);
+
+      function update(k, v) { setForm(f => ({ ...f, [k]: v })); }
+
+      async function generatePlan() {
+        setLoading(true);
+        setStep(3);
+        const goals = { muscle:"Build Muscle & Strength", fat:"Fat Loss & Conditioning", strength:"Powerlifting & Max Strength", endurance:"Athletic Endurance", tone:"Toning & Definition" };
+        const levels = { beginner:"Beginner", intermediate:"Intermediate", advanced:"Advanced" };
+        const equip = { full:"Full Gym", minimal:"Minimal Equipment", home:"Home Workout", bodyweight:"Bodyweight Only" };
+
+        const prompt = `You are an expert personal trainer. Create a detailed ${form.days}-day per week workout plan for someone with the following profile:
+- Goal: ${goals[form.goal]}
+- Level: ${levels[form.level]}
+- Equipment: ${equip[form.equipment]}
+${form.focus ? `- Focus areas: ${form.focus}` : ""}
+${form.age ? `- Age: ${form.age}` : ""}
+${form.weight ? `- Weight: ${form.weight}kg` : ""}
+
+Return ONLY a JSON object (no markdown, no backticks) with this exact structure:
+{
+  "planName": "string",
+  "summary": "string (2 sentences)",
+  "weeklySchedule": [
+    {
+      "day": "Day 1",
+      "focus": "string",
+      "duration": "string",
+      "exercises": [
+        { "name": "string", "sets": "string", "reps": "string", "rest": "string", "note": "string" }
+      ]
+    }
+  ],
+  "tips": ["tip1", "tip2", "tip3"]
+}
+Include exactly ${form.days} workout days plus rest days as needed to fill 7 days. Rest days should have exercises: [] and a focus of "Rest & Recovery".`;
+
+        try {
+          const res = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "claude-sonnet-4-20250514",
+              max_tokens: 3000,
+              messages: [{ role: "user", content: prompt }]
+            })
+          });
+          const data = await res.json();
+          const text = data.content.map(b => b.text || "").join("");
+          const clean = text.replace(/```json|```/g, "").trim();
+          const parsed = JSON.parse(clean);
+          setPlan(parsed);
+        } catch (e) {
+          setPlan({ error: true });
+        }
+        setLoading(false);
+      }
+
+      const goalOptions = [
+        { value:"muscle", label:"💪 Build Muscle", desc:"Hypertrophy & strength gains" },
+        { value:"fat", label:"🔥 Fat Loss", desc:"Burn fat, stay lean" },
+        { value:"strength", label:"🏋️ Max Strength", desc:"Powerlifting focus" },
+        { value:"endurance", label:"⚡ Endurance", desc:"Athletic conditioning" },
+        { value:"tone", label:"✨ Tone & Define", desc:"Shape & definition" },
+      ];
+
+      return (
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+          <motion.div
+            className="modal-box scrollbar-hide"
+            initial={{ opacity:0, y:40, scale:0.96 }}
+            animate={{ opacity:1, y:0, scale:1 }}
+            exit={{ opacity:0, y:20, scale:0.97 }}
+            transition={{ duration:0.35, ease:"easeOut" }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <p className="text-white/50 text-xs font-body uppercase tracking-widest mb-1">
+                  {step === 1 ? "Step 1 of 2" : step === 2 ? "Step 2 of 2" : "Your Plan"}
+                </p>
+                <h2 style={{fontFamily:"'Instrument Serif',serif", fontStyle:"italic", color:"#fff", fontSize:"1.8rem", lineHeight:1}}>
+                  {step === 1 ? "Your Goal" : step === 2 ? "Your Setup" : plan ? (plan.error ? "Oops!" : plan.planName) : "Generating..."}
+                </h2>
+              </div>
+              <button onClick={onClose} className="w-9 h-9 rounded-full liquid-glass flex items-center justify-center text-white/60 hover:text-white transition-colors text-lg">×</button>
+            </div>
+
+            {/* Step 1 */}
+            {step === 1 && (
+              <motion.div initial={{opacity:0,x:20}} animate={{opacity:1,x:0}} transition={{duration:0.3}}>
+                <p className="text-white/60 text-sm font-body mb-5">What are you training for?</p>
+                <div className="grid grid-cols-1 gap-2 mb-8">
+                  {goalOptions.map(g => (
+                    <button key={g.value} onClick={() => update("goal", g.value)}
+                      className={`text-left px-4 py-3 rounded-2xl border transition-all ${form.goal === g.value ? "border-white/40 bg-white/10" : "border-white/08 bg-white/03 hover:bg-white/06"}`}
+                      style={{ borderColor: form.goal === g.value ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.08)" }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">{g.label.split(" ")[0]}</span>
+                        <div>
+                          <p className="text-white text-sm font-medium font-body">{g.label.split(" ").slice(1).join(" ")}</p>
+                          <p className="text-white/50 text-xs font-body">{g.desc}</p>
+                        </div>
+                        {form.goal === g.value && <div className="ml-auto w-2 h-2 rounded-full bg-white" />}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <div className="mb-5">
+                  <label>Days per week</label>
+                  <div className="flex items-center gap-4 mt-2">
+                    <input type="range" min="2" max="6" value={form.days} onChange={e => update("days", +e.target.value)} />
+                    <span className="text-white font-heading italic text-2xl w-8 text-center">{form.days}</span>
+                  </div>
+                </div>
+                <button onClick={() => setStep(2)} className="w-full py-3 rounded-full bg-white text-black font-semibold font-body text-sm hover:bg-white/90 transition-colors">
+                  Continue →
+                </button>
+              </motion.div>
+            )}
+
+            {/* Step 2 */}
+            {step === 2 && (
+              <motion.div initial={{opacity:0,x:20}} animate={{opacity:1,x:0}} transition={{duration:0.3}}>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label>Experience Level</label>
+                    <select value={form.level} onChange={e => update("level", e.target.value)}>
+                      <option value="beginner">Beginner</option>
+                      <option value="intermediate">Intermediate</option>
+                      <option value="advanced">Advanced</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label>Equipment</label>
+                    <select value={form.equipment} onChange={e => update("equipment", e.target.value)}>
+                      <option value="full">Full Gym</option>
+                      <option value="minimal">Minimal Equipment</option>
+                      <option value="home">Home Workout</option>
+                      <option value="bodyweight">Bodyweight Only</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label>Age (optional)</label>
+                    <input type="number" placeholder="e.g. 28" value={form.age} onChange={e => update("age", e.target.value)} />
+                  </div>
+                  <div>
+                    <label>Weight kg (optional)</label>
+                    <input type="number" placeholder="e.g. 75" value={form.weight} onChange={e => update("weight", e.target.value)} />
+                  </div>
+                </div>
+                <div className="mb-6">
+                  <label>Target muscle groups (optional)</label>
+                  <input type="text" placeholder="e.g. chest, legs, shoulders..." value={form.focus} onChange={e => update("focus", e.target.value)} />
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => setStep(1)} className="px-6 py-3 rounded-full liquid-glass text-white font-body text-sm font-medium">← Back</button>
+                  <button onClick={generatePlan} className="flex-1 py-3 rounded-full bg-white text-black font-semibold font-body text-sm hover:bg-white/90 transition-colors">
+                    Generate My Plan ✦
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Step 3 — Loading / Result */}
+            {step === 3 && (
+              <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{duration:0.4}}>
+                {loading ? (
+                  <div className="flex flex-col items-center justify-center py-16 gap-4">
+                    <div style={{
+                      width:48, height:48, border:"2px solid rgba(255,255,255,0.1)",
+                      borderTop:"2px solid #fff", borderRadius:"50%",
+                      animation:"spin 0.8s linear infinite"
+                    }} />
+                    <p className="text-white/60 font-body text-sm">Crafting your personalised plan...</p>
+                    <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+                  </div>
+                ) : plan && !plan.error ? (
+                  <div>
+                    <p className="text-white/60 text-sm font-body mb-6">{plan.summary}</p>
+
+                    <div className="mb-6">
+                      {plan.weeklySchedule.map((day, i) => (
+                        <DayCard key={i} day={day} index={i} />
+                      ))}
+                    </div>
+
+                    {plan.tips && plan.tips.length > 0 && (
+                      <div className="liquid-glass rounded-2xl p-4 mb-5">
+                        <p className="text-white/50 text-xs uppercase tracking-widest font-body mb-3">Pro Tips</p>
+                        {plan.tips.map((tip, i) => (
+                          <p key={i} className="text-white/80 text-sm font-body font-light mb-1.5">✦ {tip}</p>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex gap-3">
+                      <button onClick={() => { setStep(1); setPlan(null); }} className="flex-1 py-3 rounded-full liquid-glass text-white font-body text-sm font-medium">
+                        Create New Plan
+                      </button>
+                      <button onClick={() => {
+                        const text = plan.weeklySchedule.map(d =>
+                          `${d.day}: ${d.focus} (${d.duration})\n` +
+                          d.exercises.map(e => `  • ${e.name}: ${e.sets}×${e.reps}, rest ${e.rest}`).join("\n")
+                        ).join("\n\n");
+                        navigator.clipboard.writeText(plan.planName + "\n\n" + text);
+                      }} className="px-5 py-3 rounded-full bg-white text-black font-semibold font-body text-sm hover:bg-white/90 transition-colors">
+                        Copy Plan
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-white/60 font-body">Something went wrong. Please try again.</p>
+                    <button onClick={() => setStep(1)} className="mt-4 px-6 py-2 rounded-full liquid-glass text-white font-body text-sm">← Start Over</button>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </motion.div>
+        </div>
+      );
+    };
+
+    function DayCard({ day, index }) {
+      const [open, setOpen] = React.useState(index < 2);
+      const isRest = day.exercises.length === 0;
+      return (
+        <div className="day-card cursor-pointer" onClick={() => !isRest && setOpen(o => !o)}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full liquid-glass flex items-center justify-center text-white/80 text-xs font-body font-semibold">{index+1}</div>
+              <div>
+                <p className="text-white text-sm font-medium font-body">{day.day}</p>
+                <p className="text-white/50 text-xs font-body">{day.focus}{day.duration && !isRest ? ` · ${day.duration}` : ""}</p>
+              </div>
+            </div>
+            {!isRest && (
+              <div className="flex items-center gap-2">
+                <span className="text-white/40 text-xs font-body">{day.exercises.length} exercises</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2">
+                  <polyline points={open ? "18 15 12 9 6 15" : "6 9 12 15 18 9"} />
+                </svg>
+              </div>
+            )}
+          </div>
+          {open && !isRest && (
+            <div className="mt-3 pt-3" style={{ borderTop:"1px solid rgba(255,255,255,0.06)" }}>
+              {day.exercises.map((ex, j) => (
+                <div key={j} className="flex items-start gap-3 mb-2.5">
+                  <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-white/60 text-[10px] font-semibold mt-0.5">{j+1}</div>
+                  <div className="flex-1">
+                    <p className="text-white text-sm font-medium font-body">{ex.name}</p>
+                    <p className="text-white/50 text-xs font-body">{ex.sets} sets × {ex.reps} · Rest {ex.rest}</p>
+                    {ex.note && <p className="text-white/35 text-xs font-body italic mt-0.5">{ex.note}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+    window.DayCard = DayCard;
+  </script>
+
+  <!-- Hero Section -->
+  <script type="text/babel">
+    window.HeroSection = function HeroSection({ onPlanClick }) {
+      const { motion } = window.Motion;
+      const fadeUp = (delay) => ({
+        initial: { filter:"blur(10px)", opacity:0, y:20 },
+        animate: { filter:"blur(0px)", opacity:1, y:0 },
+        transition: { duration:0.7, ease:"easeOut", delay }
+      });
+
+      return (
+        <section className="relative w-full min-h-screen bg-black overflow-hidden flex flex-col">
+          {/* BG Video */}
+          <window.FadingVideo
+            src="https://videos.pexels.com/video-files/6740669/6740669-uhd_2560_1440_25fps.mp4"
+            className="absolute left-1/2 top-0 -translate-x-1/2 object-cover object-top z-0"
+            style={{ width:"120%", height:"120%" }}
+          />
+          {/* Gradient overlay for text readability — subtle, not dramatic */}
+          <div className="absolute inset-0 z-[1]" style={{ background:"linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 40%, rgba(0,0,0,0.5) 100%)" }} />
+
+          {/* Content */}
+          <div className="relative z-10 flex flex-col min-h-screen">
+            <window.Navbar onPlanClick={onPlanClick} />
+
+            {/* Hero center */}
+            <div className="flex-1 flex flex-col items-center justify-center pt-24 px-4 text-center">
+              {/* Badge */}
+              <motion.div {...fadeUp(0.4)} className="liquid-glass rounded-full flex items-center gap-2 mb-6 px-2 py-1.5">
+                <span className="bg-white text-black px-3 py-1 rounded-full text-xs font-semibold font-body">New</span>
+                <span className="text-sm text-white/90 pr-3 font-body">AI-Powered Plans · Built in Seconds · Zero Guesswork</span>
+              </motion.div>
+
+              {/* Headline */}
+              <window.BlurText
+                text="Forge Your Body. Claim Your Strength."
+                className="text-6xl md:text-7xl lg:text-[5.5rem] font-heading italic text-white leading-[0.85] max-w-3xl justify-center tracking-[-4px] mb-4"
+              />
+
+              {/* Subheading */}
+              <motion.p {...fadeUp(0.8)} className="mt-4 text-sm md:text-base text-white/90 max-w-xl font-body font-light leading-tight">
+                Stop guessing. Start growing. FORGE generates science-backed workout programs tailored to your body, your goals, and your life — ready to execute today.
+              </motion.p>
+
+              {/* CTAs */}
+              <motion.div {...fadeUp(1.1)} className="flex items-center gap-5 mt-7 flex-wrap justify-center">
+                <button
+                  onClick={onPlanClick}
+                  className="liquid-glass-strong rounded-full px-6 py-3 text-sm font-medium text-white flex items-center gap-2 hover:bg-white/10 transition-colors"
+                >
+                  Build My Plan
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/>
+                  </svg>
+                </button>
+                <button className="text-white flex items-center gap-2 text-sm font-medium font-body hover:text-white/80 transition-colors">
+                  Watch Demo
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="6 4 20 12 6 20 6 4"/>
+                  </svg>
+                </button>
+              </motion.div>
+
+              {/* Stats */}
+              <motion.div {...fadeUp(1.3)} className="flex items-stretch gap-4 mt-10 flex-wrap justify-center">
+                {[
+                  { icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2Z"/><path d="M12 6v6l4 2"/></svg>, num:"8.5K+", label:"Plans Generated Today" },
+                  { icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, num:"1.2M+", label:"Active Athletes Worldwide" },
+                ].map((s, i) => (
+                  <div key={i} className="liquid-glass p-5 w-[200px] rounded-[1.25rem] flex flex-col gap-3">
+                    {s.icon}
+                    <div>
+                      <p style={{fontFamily:"'Instrument Serif',serif", fontStyle:"italic", color:"#fff", fontSize:"2.2rem", lineHeight:1, letterSpacing:"-1px"}}>{s.num}</p>
+                      <p className="text-xs text-white/70 font-body font-light mt-1.5">{s.label}</p>
+                    </div>
+                  </div>
+                ))}
+              </motion.div>
+            </div>
+
+            {/* Partners */}
+            <motion.div
+              initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:1.4, duration:0.6 }}
+              className="flex flex-col items-center gap-4 pb-8 relative z-10"
+            >
+              <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium text-white font-body">
+                Trusted by athletes at elite training facilities worldwide
+              </div>
+              <div className="flex items-center gap-10 md:gap-14 flex-wrap justify-center">
+                {["Apex","Kinetic","Vanta","Ironforge","Crest"].map(n => (
+                  <span key={n} style={{fontFamily:"'Instrument Serif',serif", fontStyle:"italic", color:"#fff", fontSize:"1.6rem", letterSpacing:"-0.5px"}}>{n}</span>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        </section>
+      );
+    };
+  </script>
+
+  <!-- Capabilities Section -->
+  <script type="text/babel">
+    window.CapabilitiesSection = function CapabilitiesSection({ onPlanClick }) {
+      const { motion } = window.Motion;
+      const ref = React.useRef(null);
+      const [vis, setVis] = React.useState(false);
+      React.useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setVis(true); }, { threshold:0.05 });
+        obs.observe(el);
+        return () => obs.disconnect();
+      }, []);
+
+      const cards = [
+        {
+          icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M20.57 14.86L22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29l-1.43-1.43Z"/></svg>,
+          tags:["Smart Splits","Muscle Maps","Auto Deload","Recovery Score"],
+          title:"Adaptive Split Design",
+          body:"AI maps your body's recovery patterns and optimises push/pull/legs, upper/lower, or full-body splits to maximise growth with minimal overtraining.",
+        },
+        {
+          icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M13 2.05v2.02c3.95.49 7 3.85 7 7.93 0 3.21-1.81 6-4.72 7.28L13 17v5h5l-1.22-1.22C19.91 19.07 22 15.76 22 12c0-5.18-3.95-9.45-9-9.95M11 2.05C5.95 2.55 2 6.82 2 12c0 3.76 2.09 7.07 5.22 8.78L6 22h5v-5l-2.28 2.28C6.81 18 5 15.21 5 12c0-4.08 3.05-7.44 7-7.93V2.05Z"/></svg>,
+          tags:["Progressive Load","1RM Tracker","Peak Weeks","Volume Cycling"],
+          title:"Progressive Overload Engine",
+          body:"Every session automatically calibrates weights, reps, and volume based on your previous performance — so you're always in the right zone for growth.",
+        },
+        {
+          icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1Z"/></svg>,
+          tags:["Macro Sync","Meal Timing","Hydration Log","Supplement Stack"],
+          title:"Nutrition Intelligence",
+          body:"Pair your workouts with precision nutrition targets. FORGE calculates macros, meal timing, and hydration needs aligned to your training phase.",
+        },
+      ];
+
+      return (
+        <section ref={ref} className="relative min-h-screen bg-black overflow-hidden">
+          <window.FadingVideo
+            src="https://videos.pexels.com/video-files/4761421/4761421-uhd_2560_1440_24fps.mp4"
+            className="absolute inset-0 w-full h-full object-cover z-0"
+          />
+          <div className="absolute inset-0 z-[1]" style={{ background:"linear-gradient(180deg,rgba(0,0,0,0.5) 0%,rgba(0,0,0,0.2) 50%,rgba(0,0,0,0.7) 100%)" }} />
+
+          <div className="relative z-10 px-8 md:px-16 lg:px-20 pt-24 pb-12 flex flex-col min-h-screen">
+            {/* Header */}
+            <div className="mb-auto">
+              <motion.p
+                initial={{opacity:0,y:10}} animate={vis?{opacity:1,y:0}:{}} transition={{duration:0.5}}
+                className="text-sm font-body text-white/70 mb-5 tracking-widest uppercase"
+              >// Capabilities</motion.p>
+              <motion.p
+                initial={{filter:"blur(10px)",opacity:0,y:20}} animate={vis?{filter:"blur(0px)",opacity:1,y:0}:{}}
+                transition={{duration:0.7,delay:0.1}}
+                style={{fontFamily:"'Instrument Serif',serif", fontStyle:"italic", color:"#fff", fontSize:"clamp(3.5rem,7vw,6rem)", lineHeight:0.9, letterSpacing:"-3px"}}
+              >
+                Training<br/>reinvented
+              </motion.p>
+            </div>
+
+            {/* Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-16">
+              {cards.map((c, i) => (
+                <motion.div
+                  key={i}
+                  initial={{opacity:0,y:30}} animate={vis?{opacity:1,y:0}:{}}
+                  transition={{duration:0.6,delay:0.2+i*0.12,ease:"easeOut"}}
+                  className="liquid-glass rounded-[1.25rem] p-6 flex flex-col"
+                  style={{ minHeight:360 }}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="w-11 h-11 rounded-[0.75rem] liquid-glass flex items-center justify-center flex-shrink-0">
+                      {c.icon}
+                    </div>
+                    <div className="flex flex-wrap justify-end gap-1.5 max-w-[68%]">
+                      {c.tags.map(t => (
+                        <span key={t} className="liquid-glass rounded-full px-3 py-1 text-[11px] text-white/90 font-body whitespace-nowrap">{t}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex-1" />
+                  <div className="mt-6">
+                    <h3 style={{fontFamily:"'Instrument Serif',serif", fontStyle:"italic", color:"#fff", fontSize:"clamp(1.6rem,2.5vw,2.1rem)", letterSpacing:"-1px", lineHeight:1}}>{c.title}</h3>
+                    <p className="mt-3 text-sm text-white/80 font-body font-light leading-snug" style={{ maxWidth:"32ch" }}>{c.body}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Bottom CTA */}
+            <motion.div
+              initial={{opacity:0,y:10}} animate={vis?{opacity:1,y:0}:{}} transition={{duration:0.5,delay:0.7}}
+              className="flex justify-center mt-12"
+            >
+              <button
+                onClick={onPlanClick}
+                className="liquid-glass-strong rounded-full px-8 py-3.5 text-white font-body font-medium text-sm flex items-center gap-2 hover:bg-white/10 transition-colors"
+              >
+                Start Building Today
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/>
+                </svg>
+              </button>
+            </motion.div>
+          </div>
+        </section>
+      );
+    };
+  </script>
+
+  <!-- App Root -->
+  <script type="text/babel">
+    const { AnimatePresence } = window.Motion;
+
+    function App() {
+      const [showModal, setShowModal] = React.useState(false);
+      const origConsoleError = React.useRef(console.error);
+      React.useEffect(() => {
+        const orig = console.error.bind(console);
+        console.error = (...args) => {
+          if (typeof args[0] === "string" && args[0].includes("key")) return;
+          orig(...args);
+        };
+        return () => { console.error = orig; };
+      }, []);
+
+      return (
+        <>
+          <window.HeroSection onPlanClick={() => setShowModal(true)} />
+          <window.CapabilitiesSection onPlanClick={() => setShowModal(true)} />
+          <AnimatePresence>
+            {showModal && <window.WorkoutPlanModal onClose={() => setShowModal(false)} />}
+          </AnimatePresence>
+        </>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
